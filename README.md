@@ -49,7 +49,7 @@ Ouvrir ensuite `demo_ica_audio.ipynb` et exécuter les cellules dans l'ordre dep
 
 ## Rapport
 
-Le rapport final, disponible dans `output/pdf/ICA_report.pdf`, compare explicitement PCA et ICA, documente la démonstration audio et présente les résultats mesurés sans reproduire le code en annexe. Le notebook versionné reste l'implémentation de référence.
+Le rapport final, disponible dans `output/pdf/ICA_report.pdf`, conserve les fondements théoriques de l'étude initiale et les approfondit avec le blanchiment PCA, la kurtosis, la négentropie, l'information mutuelle, le maximum de vraisemblance et les mises à jour FastICA. Il compare ensuite PCA et ICA, documente la démonstration audio et présente les résultats mesurés sans reproduire le code en annexe. Le notebook versionné reste l'implémentation de référence.
 
 ## Attribution
 

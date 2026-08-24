@@ -13,8 +13,8 @@
 
 \geometry{margin=2.4cm}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.6em}
-\renewcommand{\arraystretch}{1.25}
+\setlength{\parskip}{0.55em}
+\renewcommand{\arraystretch}{1.22}
 
 \definecolor{accent}{HTML}{315C7D}
 \hypersetup{
@@ -22,11 +22,11 @@
     linkcolor=accent,
     urlcolor=accent,
     citecolor=accent,
-    pdftitle={Beyond PCA: Independent Component Analysis for Audio Source Separation},
+    pdftitle={Independent Component Analysis for Signal Separation},
     pdfauthor={Hamza LOUKILI}
 }
 
-\title{Beyond PCA:\\Independent Component Analysis for Audio Source Separation}
+\title{Independent Component Analysis for Signal Separation}
 \author{Hamza LOUKILI}
 \date{August 2026}
 
@@ -35,57 +35,64 @@
 
 \begin{titlepage}
     \centering
-    \vspace*{2.4cm}
+    \vspace*{2.2cm}
     {\color{accent}\rule{0.88\textwidth}{1.2pt}}\\[1.3cm]
-    {\Huge\bfseries Beyond PCA:\\[0.3cm]
-    Independent Component Analysis\\[0.3cm]
-    for Audio Source Separation\par}
-    \vspace{1.2cm}
-    {\Large A reproducible FastICA demonstration\par}
+    {\Huge\bfseries Independent Component Analysis\\[0.35cm]
+    for Signal Separation\par}
+    \vspace{1.1cm}
+    {\Large Theory, comparison with PCA, and a reproducible audio demonstration\par}
     \vspace{1.3cm}
     {\color{accent}\rule{0.88\textwidth}{1.2pt}}\\[2.2cm]
     {\Large Hamza LOUKILI\par}
     \vfill
-    {\large Project report and technical demonstration\\August 2026\par}
+    {\large Technical project report\\August 2026\par}
     \vspace{1.2cm}
     \href{https://github.com/loukili27/ICA-Voices}{github.com/loukili27/ICA-Voices}
 \end{titlepage}
-\pagenumbering{roman}
 
+\pagenumbering{roman}
 \begin{abstract}
-Principal Component Analysis (PCA) is widely used to reduce dimensionality by finding orthogonal directions of maximum variance. Independent Component Analysis (ICA) addresses a different question: can observed signals be expressed as mixtures of latent sources that are statistically independent? This report explains that distinction and demonstrates FastICA on three mono audio mixtures. The experiment uses 264,515 samples per observation at 44.1 kHz. FastICA converges in four iterations, produces linearly uncorrelated components, and reconstructs the observations with a relative root mean square error of approximately $4.22\times10^{-16}$. These values validate the numerical factorization, but they do not prove perfect source recovery because the original isolated sources are unavailable. The code, input mixtures, and separated audio outputs are provided in the companion GitHub repository.
+Signals encountered in audio, biomedical sensing, telecommunications, and finance are often mixtures of several latent phenomena. Independent Component Analysis (ICA) is a statistical framework for estimating latent components that are as independent as possible from multivariate observations. This report preserves the theoretical development of the original study and extends it with a direct comparison to Principal Component Analysis (PCA), mathematical derivations of whitening and FastICA, and a reproducible audio experiment. Three mono mixtures containing 264,515 samples each at 44.1 kHz are processed with FastICA. The algorithm converges in four iterations, yields linearly uncorrelated components with distinct higher-order statistics, and reconstructs the observations with a relative root mean square error of $4.219\times10^{-16}$. Because isolated reference sources are unavailable, these measurements validate numerical consistency rather than perfect source recovery. The complete notebook and audio files are available in the companion GitHub repository.
 \end{abstract}
 
 \tableofcontents
+\listoffigures
 \newpage
 \pagenumbering{arabic}
 
-\section{Motivation: from data compression to source separation}
+\section{Introduction}
 
-Multivariate observations often combine information from several latent phenomena. In audio, multiple microphones can record different linear combinations of the same speakers or instruments. In electroencephalography, each electrode measures a mixture of neural activity and artifacts. Similar mixture models arise in telecommunications, biomedical sensing, and exploratory data analysis.
+Signals are ubiquitous and frequently overlap. Voices recorded in a room, readings collected by multiple sensors, or electrical potentials measured on the scalp can each contain contributions from several underlying sources. Separating those sources is essential when the mixtures obscure the information of interest.
 
-PCA and ICA are both linear representation methods, but they optimize different criteria. PCA is appropriate when the objective is compression, visualization, denoising, or variance preservation. ICA is appropriate when the objective is to recover latent signals that are as statistically independent as possible \cite{comon1994,hyvarinen2000}. The classic audio illustration is the \emph{cocktail party problem}: several sources are heard simultaneously by several microphones, and the goal is to estimate the individual sources from the recordings alone.
+\emph{Blind source separation} seeks to recover latent signals while knowing little or nothing about the sources or the physical mixing process. Independent Component Analysis (ICA) provides a principled solution when the observations can be modeled as linear mixtures of statistically independent, mainly non-Gaussian sources \cite{comon1994,hyvarinen2000}. Instead of relying only on covariance, ICA exploits higher-order and information-theoretic structure.
 
-\section{PCA and ICA: related tools, different objectives}
+This distinction is important because Principal Component Analysis (PCA) and ICA are sometimes confused. PCA identifies orthogonal directions that preserve variance and is extremely useful for compression, visualization, and denoising. ICA asks a different question: which latent directions make the recovered signals as independent as possible? PCA may prepare the data through whitening, but independence is stronger than decorrelation.
 
-\subsection{Principal Component Analysis}
+This report develops the ICA model and its assumptions, derives the main mathematical criteria used for estimation, compares ICA with PCA, reviews representative applications, and concludes with a fully reproducible audio demonstration using FastICA.
 
-For centered observations $\mathbf{x}\in\mathbb{R}^m$, PCA finds orthonormal directions that diagonalize the covariance matrix. The first principal component maximizes projected variance, the second maximizes the remaining variance subject to orthogonality, and so on \cite{jolliffe2002}. If $\mathbf{U}$ contains the eigenvectors of the covariance matrix, the PCA scores are
+\section{Theoretical foundation of ICA}
+
+\subsection{Linear instantaneous mixing model}
+
+Let the unknown source vector be
 \begin{equation}
-    \mathbf{z}=\mathbf{U}^{\mathsf T}(\mathbf{x}-\boldsymbol{\mu}).
+    \mathbf{s}(t)=[s_1(t),s_2(t),\ldots,s_n(t)]^{\mathsf T},
 \end{equation}
-The PCA scores are linearly uncorrelated. This is a second-order property determined by covariances. Uncorrelated variables are not necessarily statistically independent, except under special distributional assumptions such as joint Gaussianity.
-
-\subsection{Independent Component Analysis}
-
-ICA starts from the linear instantaneous mixing model
+and let the observed mixtures be
+\begin{equation}
+    \mathbf{x}(t)=[x_1(t),x_2(t),\ldots,x_m(t)]^{\mathsf T}.
+\end{equation}
+The basic ICA model assumes an instantaneous linear mixture
 \begin{equation}
     \mathbf{x}(t)=\mathbf{A}\mathbf{s}(t),
     \label{eq:mixing}
 \end{equation}
-where $\mathbf{s}(t)$ contains unknown sources, $\mathbf{x}(t)$ contains observed mixtures, and $\mathbf{A}$ is an unknown mixing matrix. ICA estimates an unmixing matrix $\mathbf{W}$ such that
+where $\mathbf{A}\in\mathbb{R}^{m\times n}$ is an unknown mixing matrix. Each coefficient $a_{ij}$ represents the contribution of source $j$ to observation $i$.
+
+In the determined setting, $m=n$ and $\mathbf{A}$ is invertible. ICA estimates an unmixing matrix $\mathbf{W}$ so that
 \begin{equation}
-    \mathbf{y}(t)=\mathbf{W}\mathbf{x}(t)\approx\mathbf{s}(t).
+    \mathbf{y}(t)=\mathbf{W}\mathbf{x}(t)
+    =\mathbf{W}\mathbf{A}\mathbf{s}(t)\approx\mathbf{s}(t).
     \label{eq:unmixing}
 \end{equation}
 
@@ -93,23 +100,135 @@ where $\mathbf{s}(t)$ contains unknown sources, $\mathbf{x}(t)$ contains observe
     \centering
     \fbox{\begin{minipage}{0.88\textwidth}
         \centering
-        \vspace{0.6em}
-        \[
-        \boxed{\mathbf{s}(t)}
-        \xrightarrow{\ \mathbf{A}\ }
-        \boxed{\mathbf{x}(t)}
-        \xrightarrow{\ \mathbf{W}\ }
-        \boxed{\mathbf{y}(t)\approx\mathbf{s}(t)}
-        \]
-        \vspace{0.2em}
+        \vspace{0.7em}
+        \begin{tabular}{ccccc}
+            $\boxed{\mathbf{s}(t)}$ & $\xrightarrow{\ \mathbf{A}\ }$ &
+            $\boxed{\mathbf{x}(t)}$ & $\xrightarrow{\ \mathbf{W}\ }$ &
+            $\boxed{\mathbf{y}(t)\approx\mathbf{s}(t)}$ \\[0.6em]
+            independent sources & & observed mixtures & & estimated components
+        \end{tabular}
+        \vspace{0.7em}
     \end{minipage}}
-    \caption{Linear instantaneous ICA model. FastICA estimates an unmixing transform from the observations without knowing the mixing matrix or the source waveforms.}
+    \caption{Linear instantaneous ICA model. The unknown matrix $\mathbf{A}$ mixes the latent sources, while ICA estimates an unmixing matrix $\mathbf{W}$ from the observations.}
     \label{fig:ica-model}
 \end{figure}
 
-The standard identifiable model requires mutually independent sources, a full-rank linear mixture, and at most one Gaussian source. In the determined case used here, the number of observations equals the number of sources. ICA also has unavoidable ambiguities: recovered components may appear in any order, with arbitrary sign and scale. These ambiguities do not indicate algorithmic failure.
+\subsection{Statistical independence}
 
-\subsection{Why PCA alone does not solve source separation}
+The central assumption is that the sources are mutually independent. For all admissible values,
+\begin{equation}
+    p_{s_1,\ldots,s_n}(s_1,\ldots,s_n)
+    =\prod_{i=1}^{n}p_{s_i}(s_i).
+    \label{eq:independence}
+\end{equation}
+Independence implies zero covariance when moments exist, but the converse is generally false. Two variables can be uncorrelated while remaining dependent through nonlinear or higher-order relationships. This is precisely why diagonalizing a covariance matrix with PCA does not, in general, solve the ICA problem.
+
+\subsection{Non-Gaussianity and identifiability}
+
+The classical linear ICA model permits at most one Gaussian source. A multivariate Gaussian distribution that has been whitened is rotationally symmetric: any orthogonal rotation produces the same distribution. Therefore covariance and Gaussian likelihood alone cannot identify a unique rotation. Non-Gaussian source distributions break this rotational ambiguity and make the independent directions identifiable, apart from unavoidable permutation and scaling ambiguities \cite{hyvarinenbook}.
+
+The central-limit intuition is that a normalized sum of independent random variables tends to be more Gaussian than the original variables. ICA algorithms can therefore search for projections that are maximally non-Gaussian.
+
+\subsection{Intrinsic ambiguities}
+
+Even under ideal assumptions, ICA cannot determine the original component order because
+\begin{equation}
+    \mathbf{A}\mathbf{s}=(\mathbf{A}\mathbf{P}^{-1})(\mathbf{P}\mathbf{s})
+\end{equation}
+for any permutation matrix $\mathbf{P}$. It also cannot determine component scale because a source may be multiplied by a nonzero scalar if the corresponding column of $\mathbf{A}$ is divided by the same scalar. Consequently, sign changes, scale changes, and component permutations do not indicate failure.
+
+\section{Mathematical criteria and estimation}
+
+\subsection{Centering and PCA whitening}
+
+ICA is usually applied after centering and whitening. If $\boldsymbol{\mu}=\mathbb{E}[\mathbf{x}]$, centering gives
+\begin{equation}
+    \mathbf{x}_c=\mathbf{x}-\boldsymbol{\mu}.
+\end{equation}
+Let the covariance eigendecomposition be
+\begin{equation}
+    \mathbf{C}_x=\mathbb{E}[\mathbf{x}_c\mathbf{x}_c^{\mathsf T}]
+    =\mathbf{E}\mathbf{D}\mathbf{E}^{\mathsf T}.
+\end{equation}
+A PCA whitening transform is
+\begin{equation}
+    \mathbf{z}=\mathbf{D}^{-1/2}\mathbf{E}^{\mathsf T}\mathbf{x}_c,
+    \qquad
+    \mathbb{E}[\mathbf{z}\mathbf{z}^{\mathsf T}]=\mathbf{I}.
+    \label{eq:whitening}
+\end{equation}
+Whitening removes second-order correlations and constrains the remaining ICA mixing transform to a rotation. It simplifies the optimization but does not by itself establish independence.
+
+\subsection{Kurtosis}
+
+For a zero-mean variable $y$, the fourth-order cumulant is
+\begin{equation}
+    \operatorname{kurt}(y)=\mathbb{E}[y^4]-3\bigl(\mathbb{E}[y^2]\bigr)^2.
+    \label{eq:kurtosis}
+\end{equation}
+A Gaussian variable has zero excess kurtosis. Positive and negative values characterize super-Gaussian and sub-Gaussian behavior, respectively. Maximizing the absolute kurtosis of standardized projections is one possible ICA contrast, although kurtosis can be sensitive to outliers.
+
+\subsection{Negentropy}
+
+Differential entropy is
+\begin{equation}
+    H(y)=-\int p_y(u)\log p_y(u)\,du.
+\end{equation}
+Among variables with equal variance, the Gaussian distribution has maximum entropy. Negentropy therefore defines a nonnegative measure of non-Gaussianity:
+\begin{equation}
+    J(y)=H(y_{\mathrm{Gauss}})-H(y)\geq0.
+    \label{eq:negentropy}
+\end{equation}
+Because exact entropy estimation is difficult, FastICA uses robust approximations based on smooth nonlinear functions such as $G(u)=\log\cosh(u)$ \cite{hyvarinen1999}.
+
+\subsection{Mutual information}
+
+Mutual information measures dependence between the components of $\mathbf{y}$:
+\begin{equation}
+    I(y_1,\ldots,y_n)
+    =\sum_{i=1}^{n}H(y_i)-H(\mathbf{y})\geq0.
+    \label{eq:mutual-info}
+\end{equation}
+It equals zero if and only if the components are mutually independent under standard regularity conditions. For whitened data, minimizing mutual information is closely connected to maximizing component non-Gaussianity \cite{comon1994}.
+
+\subsection{Maximum likelihood}
+
+If $\mathbf{y}=\mathbf{W}\mathbf{x}$ and the source densities $p_i$ are modeled, the change-of-variables formula gives
+\begin{equation}
+    p_{\mathbf{x}}(\mathbf{x};\mathbf{W})
+    =|\det\mathbf{W}|\prod_{i=1}^{n}p_i(\mathbf{w}_i^{\mathsf T}\mathbf{x}).
+\end{equation}
+For $T$ samples, the log-likelihood is
+\begin{equation}
+    \ell(\mathbf{W})
+    =T\log|\det\mathbf{W}|
+    +\sum_{t=1}^{T}\sum_{i=1}^{n}
+    \log p_i(\mathbf{w}_i^{\mathsf T}\mathbf{x}(t)).
+    \label{eq:likelihood}
+\end{equation}
+Maximizing this expression encourages an invertible transform whose outputs follow factorized source models.
+
+\subsection{FastICA fixed-point update}
+
+For whitened samples $\mathbf{z}$ and a unit vector $\mathbf{w}$, one FastICA update has the form
+\begin{equation}
+    \mathbf{w}^{+}
+    =\mathbb{E}\!\left[\mathbf{z}\,g(\mathbf{w}^{\mathsf T}\mathbf{z})\right]
+    -\mathbb{E}\!\left[g'(\mathbf{w}^{\mathsf T}\mathbf{z})\right]\mathbf{w},
+    \qquad
+    \mathbf{w}\leftarrow\frac{\mathbf{w}^{+}}{\|\mathbf{w}^{+}\|_2}.
+    \label{eq:fastica}
+\end{equation}
+The parallel algorithm updates all rows of $\mathbf{W}$ and then applies symmetric decorrelation,
+\begin{equation}
+    \mathbf{W}\leftarrow
+    (\mathbf{W}\mathbf{W}^{\mathsf T})^{-1/2}\mathbf{W},
+\end{equation}
+until the directions stabilize. The fixed-point approach is fast and avoids manually selecting a learning rate \cite{hyvarinen1999}.
+
+\section{PCA versus ICA}
+
+PCA and ICA are related linear methods, but their objectives and interpretations differ. PCA finds directions of maximum variance and orders them by explained variance \cite{jolliffe2002}. ICA searches for a rotation that reduces statistical dependence after second-order structure has been removed.
 
 \begin{table}[htbp]
     \centering
@@ -120,54 +239,55 @@ The standard identifiable model requires mutually independent sources, a full-ra
         \toprule
         Criterion & PCA & ICA \\
         \midrule
-        Main objective & Maximize explained variance & Minimize statistical dependence \\
+        Objective & Maximize explained variance & Minimize statistical dependence \\
         Output relation & Orthogonal and uncorrelated & As independent as possible \\
-        Statistics used & Primarily second-order covariance & Higher-order or information-theoretic structure \\
-        Typical use & Compression, denoising, visualization & Blind source separation, artifact removal \\
-        Component order & Ranked by explained variance & No intrinsic ranking \\
+        Statistics & Second-order covariance & Higher-order and information-theoretic structure \\
+        Typical use & Compression, visualization, denoising & Blind separation, latent source discovery \\
+        Ordering & Ranked by explained variance & No intrinsic ranking \\
         Ambiguities & Sign & Permutation, sign, and scale \\
+        Gaussian data & Fully meaningful & Multiple Gaussian sources are not identifiable \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-PCA is nevertheless useful inside many ICA pipelines. Centering and PCA whitening first remove linear correlations and rescale the retained directions. ICA then rotates the whitened data to seek stronger statistical independence. In other words, PCA can be a preprocessing step for ICA, but decorrelation alone is not the final objective.
+A useful workflow is therefore: PCA centers, optionally reduces dimension, and whitens; ICA then estimates the independent rotation. The demonstration later in this report makes the distinction visible: both PCA and ICA produce nearly diagonal correlation matrices, so correlation alone cannot demonstrate that ICA has recovered independent sources.
 
-\section{FastICA}
+\section{Applications of ICA}
 
-FastICA uses fixed-point iterations to maximize a contrast related to non-Gaussianity \cite{hyvarinen1999}. The central-limit intuition is that a sum of independent variables is often more Gaussian than the original variables. Searching for non-Gaussian projections can therefore reveal the underlying sources.
+ICA is useful whenever observations contain additive contributions from latent sources:
+\begin{itemize}
+    \item \textbf{Audio processing:} separation of simultaneously recorded voices or instruments, speech enhancement, and microphone-array analysis.
+    \item \textbf{Neuroscience:} removal of eye-blink, muscle, and line-noise artifacts from EEG or MEG, and exploratory decomposition of brain activity \cite{makeig1996}.
+    \item \textbf{Biomedical signals:} isolation of physiological components and artifacts in ECG, imaging, and sensor recordings.
+    \item \textbf{Image analysis:} feature extraction and decomposition of image collections into latent spatial patterns.
+    \item \textbf{Telecommunications:} blind channel identification and source separation in multi-antenna systems.
+    \item \textbf{Finance:} exploratory extraction of statistically independent factors from correlated asset returns, with careful attention to nonstationarity and interpretability.
+\end{itemize}
 
-For a standardized projection $y=\mathbf{w}^{\mathsf T}\mathbf{x}$, non-Gaussianity may be approximated through negentropy. The implementation used in this project selects the smooth nonlinearity $G(y)=\log\cosh(y)$. After each update, the estimated directions are normalized and decorrelated. The parallel FastICA variant estimates all components simultaneously.
-
-The experiment uses the \texttt{FastICA} implementation from scikit-learn with explicit unit-variance whitening \cite{sklearnfastica}. This explicit setting avoids version-dependent behavior and gives every estimated source unit variance before audio export.
+The assumptions must always be checked against the application. Reverberant audio, propagation delays, nonlinear sensors, and time-varying mixtures require extensions beyond instantaneous linear ICA.
 
 \section{Reproducible audio demonstration}
 
-\subsection{Data}
+\subsection{Input data and preprocessing}
 
-The repository contains three precomputed mono WAV mixtures named \texttt{ICA mix 1.wav}, \texttt{ICA mix 2.wav}, and \texttt{ICA mix 3.wav}. Each file has the following properties:
-\begin{itemize}
-    \item sampling rate: 44,100 Hz;
-    \item resolution: 16-bit PCM;
-    \item duration: 5.998 seconds;
-    \item samples used: 264,515;
-    \item number of observations: three;
-    \item numerical rank of the observation matrix: three.
-\end{itemize}
+The repository contains three precomputed mono WAV mixtures: \texttt{ICA mix 1.wav}, \texttt{ICA mix 2.wav}, and \texttt{ICA mix 3.wav}. Each is a 16-bit PCM signal sampled at 44,100 Hz. The shortest common segment contains 264,515 samples, corresponding to 5.998 seconds. The $264{,}515\times3$ observation matrix has numerical rank three.
 
-The integer samples are converted to floating point values, aligned to the shortest recording, and centered independently. The resulting matrix $\mathbf{X}$ has shape $264{,}515\times3$, with samples in rows and observed mixtures in columns.
+The notebook converts integer samples to floating point values, aligns all observations to the same length, and centers each channel. Three genuinely distinct observations are essential: duplicating one recording would produce a rank-deficient matrix and would not create enough information to recover three components.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/observed_mixtures.png}
-    \caption{Waveforms of the three observed audio mixtures. Their different amplitudes and envelopes reflect different contributions from the latent sources.}
+    \caption{Observed audio mixtures used by the demonstration: three mono signals sampled at 44.1 kHz over 5.998 seconds.}
     \label{fig:observed-mixtures}
 \end{figure}
 
-\subsection{Configuration}
+\subsection{FastICA configuration}
+
+The implementation uses scikit-learn's \texttt{FastICA} estimator with the parameters in Table~\ref{tab:fastica-config} \cite{sklearnfastica}. The random state is fixed for reproducibility. Unit-variance whitening is specified explicitly, and the \texttt{logcosh} contrast provides a smooth negentropy approximation.
 
 \begin{table}[htbp]
     \centering
-    \caption{FastICA configuration used in the reproducible notebook.}
+    \caption{FastICA configuration used in the notebook.}
     \label{tab:fastica-config}
     \begin{tabular}{ll}
         \toprule
@@ -176,7 +296,7 @@ The integer samples are converted to floating point values, aligned to the short
         Number of components & 3 \\
         Algorithm & Parallel \\
         Whitening & Unit variance \\
-        Contrast nonlinearity & \texttt{logcosh} \\
+        Nonlinearity & \texttt{logcosh} \\
         Maximum iterations & 2,000 \\
         Tolerance & $10^{-5}$ \\
         Random state & 42 \\
@@ -184,13 +304,13 @@ The integer samples are converted to floating point values, aligned to the short
     \end{tabular}
 \end{table}
 
-The separated components are independently normalized to 95\% of the signed 16-bit range before export. This prevents clipping and integer overflow. No arbitrary volume multiplier is applied.
+After estimation, each component is normalized independently to 95\% of the signed 16-bit range before WAV export. This prevents clipping and integer overflow; it replaces the arbitrary volume multiplier used in the historical notebook.
 
-\section{Results}
+\section{Experimental results}
 
-\subsection{Observed dependence and estimated components}
+\subsection{Dependence in the observations}
 
-The observed mixtures are strongly correlated. Their sample correlation matrix is
+The observed mixtures are strongly correlated:
 \begin{equation}
 \mathbf{R}_{X}=\begin{bmatrix}
 1.000 & 0.846 & 0.784\\
@@ -198,28 +318,39 @@ The observed mixtures are strongly correlated. Their sample correlation matrix i
 0.784 & 0.972 & 1.000
 \end{bmatrix}.
 \end{equation}
+The large off-diagonal values show that the observations share substantial linear structure.
 
-FastICA converged in four iterations. The estimated components have an identity sample correlation matrix to the displayed precision. Their Fisher kurtosis values are $[1.401,-1.499,2.775]$, compared with $[-1.273,1.290,0.931]$ for whitened PCA scores in this run. The change in higher-order statistics illustrates that ICA applies a rotation beyond PCA whitening.
+\subsection{Estimated independent components}
+
+FastICA converged in four iterations. The estimated components have an identity sample correlation matrix to the displayed precision. Their Fisher kurtosis values are
+\begin{equation}
+    [1.401,\,-1.499,\,2.775],
+\end{equation}
+compared with $[-1.273,\,1.290,\,0.931]$ for the whitened PCA scores. The change in higher-order statistics illustrates the additional rotation performed by ICA after PCA whitening.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/estimated_ica_components.png}
-    \caption{Waveforms of the three components estimated by FastICA. Component order, sign, and scale are intrinsically ambiguous in ICA.}
+    \caption{Three components estimated by FastICA. Their order, sign, and amplitude are not directly comparable with unknown source labels because of ICA's intrinsic ambiguities.}
     \label{fig:ica-components}
 \end{figure}
+
+\subsection{Why the correlation plot does not prove independence}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/pca_ica_correlation_comparison.png}
-    \caption{Correlation matrices for the observed mixtures, whitened PCA scores, and ICA estimates. PCA and ICA both remove linear correlation; this diagnostic alone therefore cannot establish statistical independence or successful source recovery.}
+    \caption{Correlation matrices of the observations, whitened PCA scores, and ICA estimates. PCA and ICA both decorrelate, demonstrating that zero linear correlation alone is not evidence of independent source recovery.}
     \label{fig:correlation-comparison}
 \end{figure}
 
-\subsection{Numerical checks}
+The plot provides an important theoretical demonstration: PCA scores are already uncorrelated, yet PCA only fixes the covariance structure. ICA uses non-Gaussianity to select a further rotation. Evidence for ICA must therefore involve the model assumptions, higher-order statistics, reference-based metrics when available, or careful qualitative analysis.
+
+\subsection{Numerical validation}
 
 \begin{table}[htbp]
     \centering
-    \caption{Measured results from the demonstration notebook.}
+    \caption{Measured outputs of the reproducible experiment.}
     \label{tab:results}
     \begin{tabular}{ll}
         \toprule
@@ -229,37 +360,39 @@ FastICA converged in four iterations. The estimated components have an identity 
         Largest absolute off-diagonal ICA correlation & $<10^{-4}$ \\
         Reconstruction RMSE & $1.608\times10^{-16}$ \\
         Relative reconstruction RMSE & $4.219\times10^{-16}$ \\
-        Exported separated files & 3 \\
+        Exported separated WAV files & 3 \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-The near-machine-precision reconstruction error confirms that the estimated mixing and unmixing transforms consistently factorize the observation matrix. It must not be interpreted as an audio source-recovery score: inverse transformation reconstructs the same mixtures on which the model was fitted.
+The near-machine-precision reconstruction error confirms that the estimated mixing and unmixing transforms consistently factorize the same observation matrix. It is not a source-separation score: inverse transformation reconstructs the mixtures used for fitting.
 
-The three exported WAV files can be inspected in \texttt{outputs/separated/} and played directly from the notebook. Listening provides a useful qualitative check, but a rigorous separation score such as SDR or SI-SDR would require access to the original isolated sources.
+The exported WAV files are stored in \texttt{outputs/separated/} and can be played inside the notebook. Listening provides a qualitative check, but a rigorous SDR or SI-SDR evaluation would require the isolated reference sources.
 
 \section{Limitations and responsible interpretation}
 
-This demonstration establishes a reproducible ICA workflow, but several limitations matter:
+The experiment supports numerical convergence, decorrelation, non-Gaussian component estimation, reconstruction consistency, and qualitative listening. It does not support a claim of objectively perfect recovery because:
 \begin{itemize}
-    \item The isolated reference sources and the original mixing matrix are not available. Exact recovery quality cannot therefore be quantified.
-    \item Zero correlation is weaker than statistical independence. PCA already demonstrates this by producing uncorrelated scores.
-    \item Instantaneous linear ICA does not explicitly model reverberation, propagation delays, nonlinear mixing, or time-varying rooms.
-    \item At least as many sufficiently distinct observations as sources are normally required in this determined formulation. Duplicating one recording does not create new information.
-    \item ICA cannot uniquely identify multiple Gaussian sources without additional structure.
+    \item the isolated reference sources and original mixing matrix are unavailable;
+    \item zero correlation is weaker than statistical independence;
+    \item the instantaneous model does not explicitly represent echo, propagation delay, nonlinear mixing, or a time-varying room;
+    \item the method requires sufficiently distinct observations and a full-rank mixture;
+    \item multiple Gaussian sources are not identifiable without additional structure.
 \end{itemize}
 
-These qualifications replace the stronger claim in the draft report that the original instruments were objectively and perfectly recovered. The available evidence supports numerical convergence, decorrelation, non-Gaussian component estimation, reconstruction consistency, and qualitative listening - not a reference-based separation score.
+These qualifications correct the stronger wording in the first report version while preserving its central theoretical motivation.
 
 \section{Conclusion}
 
-PCA and ICA answer different questions. PCA finds an orthogonal representation that preserves variance and is ideal for dimensionality reduction. ICA seeks latent components with stronger statistical independence and is therefore suited to blind source separation. In the audio demonstration, PCA whitening removes second-order correlations, while FastICA performs an additional rotation guided by non-Gaussianity. The notebook converges rapidly, produces three separated audio files, and reconstructs the observations to numerical precision.
+ICA is a fundamental method for discovering statistically independent structure in multivariate data. Its usefulness extends from the cocktail party problem to neuroscience, biomedical sensing, imaging, telecommunications, and exploratory factor analysis. The method relies on a linear mixture model, independence, non-Gaussianity, and sufficient observations.
 
-The complete reproducible implementation, audio inputs, and outputs are available at
+PCA and ICA should not be treated as interchangeable. PCA identifies variance-preserving orthogonal directions and supplies the whitening step used by many ICA algorithms. ICA then exploits higher-order information to seek a statistically meaningful rotation. The audio demonstration makes this relationship concrete: PCA and ICA both decorrelate the mixtures, but only ICA explicitly optimizes a non-Gaussian independence contrast.
+
+The complete reproducible implementation, input mixtures, and separated outputs are available at
 \begin{center}
     \href{https://github.com/loukili27/ICA-Voices}{\textbf{github.com/loukili27/ICA-Voices}}.
 \end{center}
-The report deliberately omits a code appendix: the version-controlled notebook is the authoritative implementation.
+The code is intentionally kept in the version-controlled notebook rather than duplicated in a PDF appendix.
 
 \begin{thebibliography}{9}
 
@@ -272,8 +405,14 @@ A. Hyv\"arinen, ``Fast and robust fixed-point algorithms for independent compone
 \bibitem{hyvarinen2000}
 A. Hyv\"arinen and E. Oja, ``Independent component analysis: algorithms and applications,'' \emph{Neural Networks}, vol. 13, no. 4-5, pp. 411-430, 2000. DOI: \href{https://doi.org/10.1016/S0893-6080(00)00026-5}{10.1016/S0893-6080(00)00026-5}.
 
+\bibitem{hyvarinenbook}
+A. Hyv\"arinen, J. Karhunen, and E. Oja, \emph{Independent Component Analysis}. New York: Wiley, 2001.
+
 \bibitem{jolliffe2002}
 I. T. Jolliffe, \emph{Principal Component Analysis}, 2nd ed. New York: Springer, 2002.
+
+\bibitem{makeig1996}
+S. Makeig, A. J. Bell, T.-P. Jung, and T. J. Sejnowski, ``Independent component analysis of electroencephalographic data,'' in \emph{Advances in Neural Information Processing Systems 8}, 1996, pp. 145-151.
 
 \bibitem{sklearnfastica}
 Scikit-learn developers, ``FastICA API documentation,'' \href{https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html}{scikit-learn.org}, accessed August 24, 2026.
