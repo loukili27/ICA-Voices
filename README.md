@@ -30,10 +30,12 @@ Ces mesures ne remplacent pas une évaluation avec les sources originales. L'ord
 |   `-- mixtures/
 |-- outputs/
 |   `-- separated/
-`-- report/
-    |-- main.tex
-    |-- ICA_report_draft.pdf
-    `-- figures/
+|-- report/
+|   |-- main.tex
+|   `-- figures/
+`-- output/
+    `-- pdf/
+        `-- ICA_report.pdf
 ```
 
 ## Installation et exécution
@@ -47,7 +49,7 @@ Ouvrir ensuite `demo_ica_audio.ipynb` et exécuter les cellules dans l'ordre dep
 
 ## Rapport
 
-Le rapport LaTeX est en cours de révision. Sa version finale comparera explicitement PCA et ICA et présentera les résultats de la démonstration sans inclure le code complet en annexe.
+Le rapport final, disponible dans `output/pdf/ICA_report.pdf`, compare explicitement PCA et ICA, documente la démonstration audio et présente les résultats mesurés sans reproduire le code en annexe. Le notebook versionné reste l'implémentation de référence.
 
 ## Attribution
 
