@@ -247,7 +247,7 @@ until the directions stabilize. The fixed-point approach is fast and avoids manu
 
 \section{PCA versus ICA}
 
-PCA and ICA are related linear methods, but their objectives and interpretations differ. PCA finds directions of maximum variance and orders them by explained variance \cite{jolliffe2002}. ICA searches for a rotation that reduces statistical dependence after second-order structure has been removed.
+PCA and ICA are related linear methods, but they answer different questions. PCA asks which orthogonal directions retain the greatest variance and orders them by explained variance \cite{jolliffe2002}. ICA asks which latent directions make the recovered components as statistically independent as possible. The appropriate method therefore depends on the objective, not simply on which algorithm gives uncorrelated outputs.
 
 \begin{table}[htbp]
     \centering
@@ -261,15 +261,21 @@ PCA and ICA are related linear methods, but their objectives and interpretations
         Objective & Maximize explained variance & Minimize statistical dependence \\
         Output relation & Orthogonal and uncorrelated & As independent as possible \\
         Statistics & Second-order covariance & Higher-order and information-theoretic structure \\
-        Typical use & Compression, visualization, denoising & Blind separation, latent source discovery \\
+        Typical use & Compression, visualization, denoising, feature reduction & Blind source separation and artifact removal \\
         Ordering & Ranked by explained variance & No intrinsic ranking \\
         Ambiguities & Sign & Permutation, sign, and scale \\
-        Gaussian data & Fully meaningful & Multiple Gaussian sources are not identifiable \\
+        Main assumptions & Finite covariance; orthogonal variance directions & Independent, mainly non-Gaussian latent sources and a suitable mixing model \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-A useful workflow is therefore: PCA centers, optionally reduces dimension, and whitens; ICA then estimates the independent rotation. The demonstration later in this report makes the distinction visible: both PCA and ICA produce nearly diagonal correlation matrices, so correlation alone cannot demonstrate that ICA has recovered independent sources.
+\paragraph{When to use PCA.}
+PCA is the natural choice when the goal is to reduce the number of variables, preserve as much variance as possible, visualize high-dimensional observations, remove low-variance noise, or construct compact features for a downstream model. Its ordered components make it easy to select a target dimension through the explained-variance ratio. Typical examples include exploratory data analysis, image compression, preprocessing before regression or clustering, and visualization in two or three dimensions.
+
+\paragraph{When to use ICA.}
+ICA is appropriate when the observations are believed to be mixtures of distinct latent processes and the goal is to separate or identify those processes. Typical examples include separating simultaneous voices or instruments, removing eye-blink and muscle artifacts from EEG, isolating physiological signals, and blind separation in telecommunications. ICA requires stronger assumptions than PCA, and its components are not ranked by importance.
+
+The methods can also be complementary: PCA may first reduce dimension and whiten the observations, after which ICA estimates an additional rotation using non-Gaussian, higher-order information. Thus PCA is primarily a representation and compression method, whereas ICA is primarily a source-separation method.
 
 \section{Applications of ICA}
 
@@ -354,17 +360,6 @@ compared with $[-1.273,\,1.290,\,0.931]$ for the whitened PCA scores. The change
     \label{fig:ica-components}
 \end{figure}
 
-\subsection{Why the correlation plot does not prove independence}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\textwidth]{figures/pca_ica_correlation_comparison.png}
-    \caption{Correlation matrices of the observations, whitened PCA scores, and ICA estimates. PCA and ICA both decorrelate, demonstrating that zero linear correlation alone is not evidence of independent source recovery.}
-    \label{fig:correlation-comparison}
-\end{figure}
-
-The plot provides an important theoretical demonstration: PCA scores are already uncorrelated, yet PCA only fixes the covariance structure. ICA uses non-Gaussianity to select a further rotation. Evidence for ICA must therefore involve the model assumptions, higher-order statistics, reference-based metrics when available, or careful qualitative analysis.
-
 \subsection{Numerical validation}
 
 \begin{table}[htbp]
@@ -405,7 +400,7 @@ These qualifications correct the stronger wording in the first report version wh
 
 ICA is a fundamental method for discovering statistically independent structure in multivariate data. Its usefulness extends from the cocktail party problem to neuroscience, biomedical sensing, imaging, telecommunications, and exploratory factor analysis. The method relies on a linear mixture model, independence, non-Gaussianity, and sufficient observations.
 
-PCA and ICA should not be treated as interchangeable. PCA identifies variance-preserving orthogonal directions and supplies the whitening step used by many ICA algorithms. ICA then exploits higher-order information to seek a statistically meaningful rotation. The audio demonstration makes this relationship concrete: PCA and ICA both decorrelate the mixtures, but only ICA explicitly optimizes a non-Gaussian independence contrast.
+PCA and ICA should not be treated as interchangeable. PCA identifies variance-preserving orthogonal directions and is preferred for dimensionality reduction, compact representation, and visualization. ICA exploits higher-order information to seek statistically independent latent processes and is preferred for blind source separation. PCA can also supply the dimension-reduction and whitening steps used before ICA.
 
 The complete reproducible implementation, input mixtures, and separated outputs are available at
 \begin{center}
