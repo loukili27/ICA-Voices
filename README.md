@@ -1,11 +1,8 @@
 # ICA Audio Source Separation
 
-Projet pédagogique consacré à l'**Independent Component Analysis (ICA)** et à son application au problème de séparation aveugle de sources audio (*cocktail party problem*).
+Projet pédagogique consacré à l'**Independent Component Analysis (ICA)** : modèle mathématique, hypothèses d'identifiabilité, critères d'estimation, algorithme FastICA, domaines d'application et séparation aveugle de sources audio (*cocktail party problem*).
 
-Le projet met notamment en évidence la différence entre :
-
-- **PCA / ACP**, qui recherche des directions orthogonales maximisant la variance ;
-- **ICA / ACI**, qui recherche des composantes aussi indépendantes et non gaussiennes que possible.
+La PCA / ACP n'est abordée qu'en complément, afin d'expliquer son rôle éventuel dans le blanchiment et de préciser quand choisir une réduction de dimension plutôt qu'une séparation de sources.
 
 ## Démonstration
 
@@ -49,7 +46,7 @@ Ouvrir ensuite `demo_ica_audio.ipynb` et exécuter les cellules dans l'ordre dep
 
 ## Rapport
 
-Le rapport final, disponible dans `output/pdf/ICA_report.pdf`, conserve les fondements théoriques de l'étude initiale et les approfondit avec le blanchiment PCA, la kurtosis, la négentropie, l'information mutuelle, le maximum de vraisemblance et les mises à jour FastICA. Il compare ensuite PCA et ICA, documente la démonstration audio et présente les résultats mesurés sans reproduire le code en annexe. Le notebook versionné reste l'implémentation de référence.
+Le rapport final, disponible dans `output/pdf/ICA_report.pdf`, est centré sur l'ICA. Il développe le modèle de mélange, l'indépendance statistique, la non-gaussianité, les ambiguïtés intrinsèques, le blanchiment, la kurtosis, la négentropie, l'information mutuelle, le maximum de vraisemblance, FastICA et les principaux domaines d'utilisation. Il documente ensuite la démonstration audio et ses limites. Une courte mise en perspective avec la PCA apparaît seulement à la fin. Le code reste dans le notebook versionné et n'est pas reproduit en annexe.
 
 ## Attribution
 

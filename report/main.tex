@@ -1,58 +1,58 @@
-\documentclass[a4paper,11pt]{article}
+\documentclass[
+    paper=a4,
+    fontsize=11pt,
+    DIV=11,
+    parskip=half,
+    headings=normal,
+    numbers=noendperiod,
+    abstract=true,
+    titlepage=true
+]{scrartcl}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{microtype}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
-\usepackage{geometry}
-\usepackage{xcolor}
-\usepackage{hyperref}
+\usepackage{scrlayer-scrpage}
+\usepackage[hidelinks]{hyperref}
 
-\geometry{margin=2.4cm}
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{0.55em}
 \renewcommand{\arraystretch}{1.22}
 
-\definecolor{accent}{HTML}{315C7D}
 \hypersetup{
-    colorlinks=true,
-    linkcolor=accent,
-    urlcolor=accent,
-    citecolor=accent,
-    pdftitle={Independent Component Analysis for Signal Separation},
+    pdftitle={Independent Component Analysis: Foundations, Applications, and Audio Demonstration},
     pdfauthor={Hamza LOUKILI}
 }
 
-\title{Independent Component Analysis for Signal Separation}
+\clearpairofpagestyles
+\automark{section}
+\ihead{\headmark}
+\ohead{Independent Component Analysis}
+\cfoot{\pagemark}
+\KOMAoptions{headsepline=true}
+\setkomafont{pageheadfoot}{\normalfont\small}
+\setkomafont{disposition}{\normalfont\bfseries}
+
+\titlehead{\centering Technical Project Report}
+\subject{Signal Processing and Blind Source Separation}
+\title{Independent Component Analysis}
+\subtitle{Foundations, algorithms, applications, and a reproducible audio demonstration}
 \author{Hamza LOUKILI}
 \date{August 2026}
+\publishers{\href{https://github.com/loukili27/ICA-Voices}{github.com/loukili27/ICA-Voices}}
 
 \begin{document}
-\pagenumbering{gobble}
-
-\begin{titlepage}
-    \centering
-    \vspace*{2.2cm}
-    {\color{accent}\rule{0.88\textwidth}{1.2pt}}\\[1.3cm]
-    {\Huge\bfseries Independent Component Analysis\\[0.35cm]
-    for Signal Separation\par}
-    \vspace{1.1cm}
-    {\Large Theory, comparison with PCA, and a reproducible audio demonstration\par}
-    \vspace{1.3cm}
-    {\color{accent}\rule{0.88\textwidth}{1.2pt}}\\[2.2cm]
-    {\Large Hamza LOUKILI\par}
-    \vfill
-    {\large Technical project report\\August 2026\par}
-    \vspace{1.2cm}
-    \href{https://github.com/loukili27/ICA-Voices}{github.com/loukili27/ICA-Voices}
-\end{titlepage}
+\hypersetup{pageanchor=false}
+\maketitle
+\hypersetup{pageanchor=true}
 
 \pagenumbering{roman}
 \begin{abstract}
-Signals encountered in audio, biomedical sensing, telecommunications, and finance are often mixtures of several latent phenomena. Independent Component Analysis (ICA) is a statistical framework for estimating latent components that are as independent as possible from multivariate observations. This report preserves the theoretical development of the original study and extends it with a direct comparison to Principal Component Analysis (PCA), mathematical derivations of whitening and FastICA, and a reproducible audio experiment. Three mono mixtures containing 264,515 samples each at 44.1 kHz are processed with FastICA. The algorithm converges in four iterations, yields linearly uncorrelated components with distinct higher-order statistics, and reconstructs the observations with a relative root mean square error of $4.219\times10^{-16}$. Because isolated reference sources are unavailable, these measurements validate numerical consistency rather than perfect source recovery. The complete notebook and audio files are available in the companion GitHub repository.
+Signals encountered in audio, neuroscience, biomedical sensing, telecommunications, and finance are often mixtures of several latent phenomena. Independent Component Analysis (ICA) is a statistical framework for estimating latent components that are as independent as possible from multivariate observations. This report presents the linear ICA model, its identifiability assumptions, the principal estimation criteria, the FastICA algorithm, and representative application domains. A reproducible audio experiment then applies FastICA to three mono mixtures containing 264,515 samples each at 44.1 kHz. The algorithm converges in four iterations and reconstructs the observations with a relative root mean square error of $4.219\times10^{-16}$. Because isolated reference sources are unavailable, these measurements establish numerical consistency rather than perfect source recovery. A brief final section positions ICA relative to Principal Component Analysis (PCA) without making that comparison the central subject of the report.
 \end{abstract}
 
 \tableofcontents
@@ -66,9 +66,9 @@ Signals are ubiquitous and frequently overlap. Voices recorded in a room, readin
 
 \emph{Blind source separation} seeks to recover latent signals while knowing little or nothing about the sources or the physical mixing process. Independent Component Analysis (ICA) provides a principled solution when the observations can be modeled as linear mixtures of statistically independent, mainly non-Gaussian sources \cite{comon1994,hyvarinen2000}. Instead of relying only on covariance, ICA exploits higher-order and information-theoretic structure.
 
-This distinction is important because Principal Component Analysis (PCA) and ICA are sometimes confused. PCA identifies orthogonal directions that preserve variance and is extremely useful for compression, visualization, and denoising. ICA asks a different question: which latent directions make the recovered signals as independent as possible? PCA may prepare the data through whitening, but independence is stronger than decorrelation.
+ICA is not a single-purpose audio technique. It is a general latent-variable method whose usefulness depends on the physical model, the statistical independence assumption, source non-Gaussianity, and the availability of sufficiently distinct observations.
 
-This report develops the ICA model and its assumptions, derives the main mathematical criteria used for estimation, compares ICA with PCA, reviews representative applications, and concludes with a fully reproducible audio demonstration using FastICA.
+This report develops the ICA model and its assumptions, derives the main estimation criteria, explains FastICA, reviews representative applications, and presents a fully reproducible audio demonstration. Only after the ICA analysis is complete is PCA mentioned briefly to clarify when each method is appropriate.
 
 \section{Theoretical foundation of ICA}
 
@@ -100,6 +100,7 @@ In the determined setting, $m=n$ and $\mathbf{A}$ is invertible. ICA estimates a
     \centering
     \fbox{\begin{minipage}{0.88\textwidth}
         \centering
+        \small
         \vspace{0.7em}
         \begin{tabular}{ccccc}
             $\boxed{\mathbf{s}(t)}$ & $\xrightarrow{\ \mathbf{A}\ }$ &
@@ -158,7 +159,7 @@ for any permutation matrix $\mathbf{P}$. It also cannot determine component scal
 
 \section{Mathematical criteria and estimation}
 
-\subsection{Centering and PCA whitening}
+\subsection{Centering and whitening}
 
 ICA is usually applied after centering and whitening. If $\boldsymbol{\mu}=\mathbb{E}[\mathbf{x}]$, centering gives
 \begin{equation}
@@ -169,7 +170,7 @@ Let the covariance eigendecomposition be
     \mathbf{C}_x=\mathbb{E}[\mathbf{x}_c\mathbf{x}_c^{\mathsf T}]
     =\mathbf{E}\mathbf{D}\mathbf{E}^{\mathsf T}.
 \end{equation}
-A PCA whitening transform is
+A common whitening transform based on this eigendecomposition is
 \begin{equation}
     \mathbf{z}=\mathbf{D}^{-1/2}\mathbf{E}^{\mathsf T}\mathbf{x}_c,
     \qquad
@@ -245,51 +246,22 @@ The parallel algorithm updates all rows of $\mathbf{W}$ and then applies symmetr
 \end{equation}
 until the directions stabilize. The fixed-point approach is fast and avoids manually selecting a learning rate \cite{hyvarinen1999}.
 
-\section{PCA versus ICA}
+\section{Applications and use cases}
 
-PCA and ICA are related linear methods, but they answer different questions. PCA asks which orthogonal directions retain the greatest variance and orders them by explained variance \cite{jolliffe2002}. ICA asks which latent directions make the recovered components as statistically independent as possible. The appropriate method therefore depends on the objective, not simply on which algorithm gives uncorrelated outputs.
-
-\begin{table}[htbp]
-    \centering
-    \small
-    \caption{Conceptual comparison of PCA and ICA.}
-    \label{tab:pca-ica}
-    \begin{tabular}{>{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}p{0.34\textwidth} >{\raggedright\arraybackslash}p{0.34\textwidth}}
-        \toprule
-        Criterion & PCA & ICA \\
-        \midrule
-        Objective & Maximize explained variance & Minimize statistical dependence \\
-        Output relation & Orthogonal and uncorrelated & As independent as possible \\
-        Statistics & Second-order covariance & Higher-order and information-theoretic structure \\
-        Typical use & Compression, visualization, denoising, feature reduction & Blind source separation and artifact removal \\
-        Ordering & Ranked by explained variance & No intrinsic ranking \\
-        Ambiguities & Sign & Permutation, sign, and scale \\
-        Main assumptions & Finite covariance; orthogonal variance directions & Independent, mainly non-Gaussian latent sources and a suitable mixing model \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\paragraph{When to use PCA.}
-PCA is the natural choice when the goal is to reduce the number of variables, preserve as much variance as possible, visualize high-dimensional observations, remove low-variance noise, or construct compact features for a downstream model. Its ordered components make it easy to select a target dimension through the explained-variance ratio. Typical examples include exploratory data analysis, image compression, preprocessing before regression or clustering, and visualization in two or three dimensions.
-
-\paragraph{When to use ICA.}
-ICA is appropriate when the observations are believed to be mixtures of distinct latent processes and the goal is to separate or identify those processes. Typical examples include separating simultaneous voices or instruments, removing eye-blink and muscle artifacts from EEG, isolating physiological signals, and blind separation in telecommunications. ICA requires stronger assumptions than PCA, and its components are not ranked by importance.
-
-The methods can also be complementary: PCA may first reduce dimension and whiten the observations, after which ICA estimates an additional rotation using non-Gaussian, higher-order information. Thus PCA is primarily a representation and compression method, whereas ICA is primarily a source-separation method.
-
-\section{Applications of ICA}
-
-ICA is useful whenever observations contain additive contributions from latent sources:
+ICA is most valuable when several recorded variables contain overlapping contributions from latent processes and those processes have a plausible interpretation. Its role varies across domains:
 \begin{itemize}
-    \item \textbf{Audio processing:} separation of simultaneously recorded voices or instruments, speech enhancement, and microphone-array analysis.
-    \item \textbf{Neuroscience:} removal of eye-blink, muscle, and line-noise artifacts from EEG or MEG, and exploratory decomposition of brain activity \cite{makeig1996}.
-    \item \textbf{Biomedical signals:} isolation of physiological components and artifacts in ECG, imaging, and sensor recordings.
-    \item \textbf{Image analysis:} feature extraction and decomposition of image collections into latent spatial patterns.
-    \item \textbf{Telecommunications:} blind channel identification and source separation in multi-antenna systems.
-    \item \textbf{Finance:} exploratory extraction of statistically independent factors from correlated asset returns, with careful attention to nonstationarity and interpretability.
+    \item \textbf{Audio and acoustics:} separating simultaneously recorded voices or instruments, enhancing speech, analyzing microphone arrays, and studying the cocktail-party problem.
+    \item \textbf{Neuroscience:} removing eye-blink, muscle, cardiac, and line-noise artifacts from EEG or MEG; ICA can also provide an exploratory decomposition of brain activity \cite{makeig1996}.
+    \item \textbf{Biomedical sensing:} isolating physiological components and measurement artifacts in ECG, imaging, and multimodal sensor recordings.
+    \item \textbf{Images and spatial data:} decomposing image collections into latent spatial patterns and extracting statistically distinct features.
+    \item \textbf{Telecommunications:} blind channel identification, multi-user detection, and source separation in multi-antenna systems.
+    \item \textbf{Industrial monitoring:} separating process variations, disturbances, and sensor effects for exploratory fault detection.
+    \item \textbf{Finance:} exploring statistically independent factors in correlated returns, subject to strong cautions about nonstationarity and economic interpretation.
 \end{itemize}
 
-The assumptions must always be checked against the application. Reverberant audio, propagation delays, nonlinear sensors, and time-varying mixtures require extensions beyond instantaneous linear ICA.
+These examples share a common objective: recovering interpretable latent mechanisms rather than merely compressing the observations. ICA is therefore especially relevant when the components themselves matter.
+
+The assumptions must always be checked against the application. Reverberant audio, propagation delays, nonlinear sensors, nonstationary sources, and time-varying mixtures require extensions beyond instantaneous linear ICA. When the latent sources are not plausibly independent, an ICA decomposition may still be mathematically computable but scientifically misleading.
 
 \section{Reproducible audio demonstration}
 
@@ -351,7 +323,7 @@ FastICA converged in four iterations. The estimated components have an identity 
 \begin{equation}
     [1.401,\,-1.499,\,2.775],
 \end{equation}
-compared with $[-1.273,\,1.290,\,0.931]$ for the whitened PCA scores. The change in higher-order statistics illustrates the additional rotation performed by ICA after PCA whitening.
+so all three components depart from Gaussianity at the fourth-order level. The signs indicate different distribution shapes: positive excess kurtosis is associated with heavier tails, while negative excess kurtosis indicates a flatter distribution. These values support the non-Gaussianity used by FastICA, but they are not by themselves proof that the recovered components match the unknown physical sources.
 
 \begin{figure}[htbp]
     \centering
@@ -396,17 +368,41 @@ The experiment supports numerical convergence, decorrelation, non-Gaussian compo
 
 These qualifications correct the stronger wording in the first report version while preserving its central theoretical motivation.
 
+\clearpage
+\section{Practical positioning relative to PCA}
+
+PCA is mentioned here only to prevent a common methodological confusion. PCA and ICA are both linear transformations, but they are designed for different goals \cite{jolliffe2002}. PCA is primarily a representation method: it orders orthogonal directions by explained variance. ICA is primarily a source-separation method: it searches for latent directions that are as statistically independent as possible.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Practical distinction between PCA and ICA.}
+    \label{tab:pca-ica}
+    \begin{tabular}{>{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}p{0.33\textwidth} >{\raggedright\arraybackslash}p{0.33\textwidth}}
+        \toprule
+        Question & PCA & ICA \\
+        \midrule
+        Main objective & Preserve variance in fewer orthogonal variables & Recover statistically independent latent components \\
+        Main information & Covariance and second-order structure & Non-Gaussianity and higher-order structure \\
+        Choose it for & Dimension reduction, visualization, compression, denoising & Blind source separation, artifact removal, latent-process discovery \\
+        Component order & Ranked by explained variance & No intrinsic ranking \\
+        Main caution & High variance is not necessarily meaningful & Independence and mixing assumptions must be plausible \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Use PCA when the objective is to obtain a compact representation of high-dimensional data. Use ICA when the observations are believed to be mixtures and the latent signals themselves are the target. The methods can also be complementary: PCA may reduce dimension and whiten the data before ICA estimates an independent rotation.
+
 \section{Conclusion}
 
-ICA is a fundamental method for discovering statistically independent structure in multivariate data. Its usefulness extends from the cocktail party problem to neuroscience, biomedical sensing, imaging, telecommunications, and exploratory factor analysis. The method relies on a linear mixture model, independence, non-Gaussianity, and sufficient observations.
+ICA is a fundamental method for discovering statistically independent structure in multivariate data. Its usefulness extends from the cocktail-party problem to neuroscience, biomedical sensing, imaging, telecommunications, industrial monitoring, and exploratory factor analysis. The method relies on a suitable mixture model, source independence, non-Gaussianity, and sufficiently informative observations.
 
-PCA and ICA should not be treated as interchangeable. PCA identifies variance-preserving orthogonal directions and is preferred for dimensionality reduction, compact representation, and visualization. ICA exploits higher-order information to seek statistically independent latent processes and is preferred for blind source separation. PCA can also supply the dimension-reduction and whitening steps used before ICA.
+The audio experiment makes the complete workflow concrete: align and center the mixtures, whiten the data, estimate the unmixing transform with FastICA, export the components, and validate the numerical factorization. The results establish convergence and internal consistency while the absence of isolated references prevents a claim of objectively perfect separation.
 
 The complete reproducible implementation, input mixtures, and separated outputs are available at
 \begin{center}
     \href{https://github.com/loukili27/ICA-Voices}{\textbf{github.com/loukili27/ICA-Voices}}.
 \end{center}
-The code is intentionally kept in the version-controlled notebook rather than duplicated in a PDF appendix.
 
 \begin{thebibliography}{9}
 
