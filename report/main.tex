@@ -113,6 +113,25 @@ In the determined setting, $m=n$ and $\mathbf{A}$ is invertible. ICA estimates a
     \label{fig:ica-model}
 \end{figure}
 
+Figure~\ref{fig:ica-intuitive} retains the intuitive illustration from the
+original report: several physical sources contribute simultaneously to each
+microphone signal, and ICA attempts to recover one latent component per
+output. It complements the compact matrix representation in
+Figure~\ref{fig:ica-model}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.62\textwidth]{figures/ica_separation.png}
+    \caption[Intuitive blind source separation example retained from the
+    original report.]{Intuitive blind source separation example retained from the
+    original project materials. The source signals $\mathbf{s}(t)$ are mixed
+    into microphone observations $\mathbf{x}(t)=\mathbf{A}\mathbf{s}(t)$,
+    before ICA estimates $\mathbf{y}(t)=\mathbf{W}\mathbf{x}(t)$. The original
+    external source of this legacy illustration should be confirmed before
+    public redistribution.}
+    \label{fig:ica-intuitive}
+\end{figure}
+
 \subsection{Statistical independence}
 
 The central assumption is that the sources are mutually independent. For all admissible values,
